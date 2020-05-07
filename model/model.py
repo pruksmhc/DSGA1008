@@ -12,21 +12,15 @@ Adapted from: https://medium.com/@fractaldle/guide-to-build-faster-rcnn-in-pytor
 """
 device = "cuda"
 
-class FasterRCNN(nn.Module):
-    self.train = None
-    self.device = None
-    self.backbone = None
-    self.img_size = None
-    self.anchor_generator = None
-    self.rpn_in_features = None
-    self.region_proposal_network = None
-    self.max_pooling_layer = None
-    self.classifier = None
+class FasterRCNNBoundingBox(nn.Module):
 
     def __init__(self, train = False, device = None, img_size = 800, 
                  rpn_in_features = 512, backbone = None, region_proposal_network = None,
                  max_pooling_layer = None, classifier = None):
         super(FasterRCNN, self).__init__()
+        self.train = None
+        self.device = device
+        self.backbone = None
         self.train = train
         if backbone is None:
             self.backbone = models.alexnet(pretrained=False, num_classes=4).to(device)
@@ -61,15 +55,31 @@ class FasterRCNN(nn.Module):
     def compute_loss(self, samples):
         raise NotImplementedError()
                 
-    def forward(self, samples, bboxes = None, labels = None):
-        # This is a not-transformed sample.
+    def forward(self, samples, bboxes = None, labels = None, train=False):
+        """
+        Args:
+            samples: This is the transformed images.
+            bboxes: This is the target bounding boxes.
+            labels: This is the target categories of each bounding box.
+            train: bool
+
+        Returns:
+            Output locations, output scores, and a bunch of things you need to calculate the loss.
+        """
+        # This is a transformed sample.
         img_features = self.alexnet.features(samples[0].to(device))
         img_features = torch.nn.functional.interpolate(img_features, size=(512,50,50))[0]
         # Generate anchor boxes
-        anchor_locations, anchor_labels = self.achor_generator.forward(bboxes)
+        anchor_locations, anchor_labels, anchors = self.achor_generator.forward(bboxes)
         
-        sample_rois, gt_roi_locs, gt_roi_labels = self.region_proposal_network(img_features, bboxes, labels)
+        sample_rois, gt_roi_locs, gt_roi_labels = self.region_proposal_network(img_features, bboxes, anchors, labels)
 
         output = self.max_pooling_layer(sample_rois, img_features)
 
-        return classifier(output)
+        if train:
+            # Get the logits
+            output_loc, output_score, _, _ = self.classifier(output)
+        else:
+            # Get the predictions
+            _, _, output_loc, output_score = self.classifier(output)
+        return output_loc, output_score, anchor_locations, anchor_labels, gt_roi_locs, gt_roi_labels

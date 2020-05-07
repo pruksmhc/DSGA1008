@@ -1,33 +1,10 @@
+import torch
 import torch.nn as nn
+import numpy as np
 
 class RegionProposalNetwork(nn.Module):
-    #variables to generate proposal rois
-    self.in_channels = None
-    self.device = None
-    self.train = None
-    self.mid_channels = None
-    self.n_anchors = None
-    self.image_size = None
-    self.nms_thresh = None
-    self.min_size = None
-    self.n_train_pre_nms = None
-    self.n_train_post_nms = None
-    self.n_test_pre_nms = None
-    self.n_test_post_nms = None
-    self.conv1 = None
-    self.reg_layer = None
-    self.cls_layer = None
 
-    #variables to generate ground 
-    #truth locations and targets
-    self.n_sample = None
-    self.pos_ratio = None
-    self.pos_iou_thresh = None
-    self.neg_iou_thresh_hi = None
-    self.neg_iou_thresh_lo = None
-    self.pos_roi_per_image = None
-
-    def __init__(self, in_channels, device, train = False, mid_channels = 512, n_anchor = 9, image_size = 800
+    def __init__(self, in_channels, device, mid_channels = 512, n_anchor = 9, image_size = 800,
                  nms_thresh = 0.7, min_size = 16, n_train_pre_nms = 12000,
                  n_train_post_nms = 2000, n_test_pre_nms = 6000, n_test_post_nms = 300,
                  conv1 = None, reg_layer = None, cls_layer = None,
@@ -36,7 +13,6 @@ class RegionProposalNetwork(nn.Module):
         super(RegionProposalNetwork, self).__init__()
         self.in_channels = in_channels
         self.device = device
-        self.train = train
         self.mid_channels = mid_channels
         self.n_anchor = n_anchor
         self.image_size = image_size
@@ -76,7 +52,7 @@ class RegionProposalNetwork(nn.Module):
         else:
             self.cls_layer = cls_layer
 
-        def generate_proposal_rois(self, features):
+        def generate_proposal_rois(self, features, anchors):
             if self.train:
                 pre_nms = self.n_train_pre_nms
                 post_nms = self.n_train_post_nms
@@ -112,59 +88,59 @@ class RegionProposalNetwork(nn.Module):
             ctr_x = dx * anc_width[:, np.newaxis] + anc_ctr_x[:, np.newaxis]
             h = np.exp(dh) * anc_height[:, np.newaxis]
             w = np.exp(dw) * anc_width[:, np.newaxis]
-            
             roi = np.zeros(pred_anchor_locs_numpy.shape, dtype=pred_anchor_locs_numpy.dtype)
             roi[:, 0::4] = ctr_y - 0.5 * h
             roi[:, 1::4] = ctr_x - 0.5 * w
             roi[:, 2::4] = ctr_y + 0.5 * h
             roi[:, 3::4] = ctr_x + 0.5 * w
-            
-        roi[:, slice(0, 4, 2)] = np.clip(
-            roi[:, slice(0, 4, 2)], 0, self.img_size)
-        roi[:, slice(1, 4, 2)] = np.clip(
-            roi[:, slice(1, 4, 2)], 0, self.img_size)
-        
-        hs = roi[:, 2] - roi[:, 0]
-        ws = roi[:, 3] - roi[:, 1]
-        keep = np.where((hs >= min_size) & (ws >= min_size))[0]
-        roi = roi[keep, :]
-        score = objectness_score_numpy[keep]
-        
-        order = score.ravel().argsort()[::-1]
-        order = order[:pre_nms]
-        roi = roi[order, :]
-        
-        y1 = roi[:, 0]
-        x1 = roi[:, 1]
-        y2 = roi[:, 2]
-        x2 = roi[:, 3]
-        area = (x2 - x1 + 1) * (y2 - y1 + 1)
-        order = score[:n_train_pre_nms].argsort()[::-1]
-        keep = []
-        while order.size > 0:
-            #print(order.size)
-            i = order[0]
-            keep.append(i)
-    
-            xx1 = np.maximum(x1[i], x1[order[1:]])
-            yy1 = np.maximum(y1[i], y1[order[1:]])
-            xx2 = np.minimum(x2[i], x2[order[1:]])
-            yy2 = np.minimum(y2[i], y2[order[1:]])
-            
-            w = np.maximum(0.0, xx2 - xx1 + 1)
-            h = np.maximum(0.0, yy2 - yy1 + 1)
-            
-            inter = w * h
-            ovr = inter / (area[i] + area[order[1:]] - inter)
-            inds = np.where(ovr <= nms_thresh)[0]
-            order = order[inds + 1]
-            
-            keep = keep[:post_nms] # while training/testing , use accordingly
-            roi = roi[keep] # the final region proposals
+
+            roi[:, slice(0, 4, 2)] = np.clip(
+                roi[:, slice(0, 4, 2)], 0, self.img_size)
+            roi[:, slice(1, 4, 2)] = np.clip(
+                roi[:, slice(1, 4, 2)], 0, self.img_size)
+
+            hs = roi[:, 2] - roi[:, 0]
+            ws = roi[:, 3] - roi[:, 1]
+            keep = np.where((hs >= min_size) & (ws >= min_size))[0]
+            roi = roi[keep, :]
+            score = objectness_score_numpy[keep]
+
+            order = score.ravel().argsort()[::-1]
+            order = order[:pre_nms]
+            roi = roi[order, :]
+
+            y1 = roi[:, 0]
+            x1 = roi[:, 1]
+            y2 = roi[:, 2]
+            x2 = roi[:, 3]
+            area = (x2 - x1 + 1) * (y2 - y1 + 1)
+            order = score[:n_train_pre_nms].argsort()[::-1]
+            keep = []
+            while order.size > 0:
+                #print(order.size)
+                i = order[0]
+                keep.append(i)
+
+                xx1 = np.maximum(x1[i], x1[order[1:]])
+                yy1 = np.maximum(y1[i], y1[order[1:]])
+                xx2 = np.minimum(x2[i], x2[order[1:]])
+                yy2 = np.minimum(y2[i], y2[order[1:]])
+
+                w = np.maximum(0.0, xx2 - xx1 + 1)
+                h = np.maximum(0.0, yy2 - yy1 + 1)
+
+                inter = w * h
+                ovr = inter / (area[i] + area[order[1:]] - inter)
+                inds = np.where(ovr <= nms_thresh)[0]
+                order = order[inds + 1]
+
+                keep = keep[:post_nms] # while training/testing , use accordingly
+                roi = roi[keep] # the final region proposals
 
             return roi
 
-        def generate_ground_truth_locs_and_labels_train(self, proposal_rois, bboxes, labels):
+        def generate_sample_rois(self, proposal_rois, labels, train):
+            bboxes = torch.Tensor([[200, 400, 600, 400], [200, 200, 600, 300]])
             ious = np.empty((len(proposal_rois), len(bboxes)), dtype=np.float32)
             ious.fill(0)
             for num1, i in enumerate(proposal_rois):
@@ -185,12 +161,8 @@ class RegionProposalNetwork(nn.Module):
                     else:
                         iou = 0.
                     ious[num1, num2] = iou
-                        
-            gt_assignment = ious.argmax(axis=1)
+
             max_iou = ious.max(axis=1)
-
-            gt_roi_label = labels[gt_assignment]
-
             pos_index = np.where(max_iou >= self.pos_iou_thresh)[0]
             pos_roi_per_this_image = int(min(self.pos_roi_per_image, pos_index.size))
             if pos_index.size > 0:
@@ -207,95 +179,22 @@ class RegionProposalNetwork(nn.Module):
                     neg_index, size=neg_roi_per_this_image, replace=False)
                     
             keep_index = np.append(pos_index, neg_index)
-            gt_roi_labels = gt_roi_label[keep_index]
-            gt_roi_labels[pos_roi_per_this_image:] = 0  # negative labels --> 0
-            sample_roi = roi[keep_index]
-            
-            bbox_for_sampled_roi = bboxes[gt_assignment[keep_index]]
-            
-            height = sample_roi[:, 2] - sample_roi[:, 0]
-            width = sample_roi[:, 3] - sample_roi[:, 1]
-            ctr_y = sample_roi[:, 0] + 0.5 * height
-            ctr_x = sample_roi[:, 1] + 0.5 * width
-            base_height = bbox_for_sampled_roi[:, 2] - bbox_for_sampled_roi[:, 0]
-            base_width = bbox_for_sampled_roi[:, 3] - bbox_for_sampled_roi[:, 1]
-            base_ctr_y = bbox_for_sampled_roi[:, 0] + 0.5 * base_height
-            base_ctr_x = bbox_for_sampled_roi[:, 1] + 0.5 * base_width
-            
-            eps = np.finfo(height.dtype).eps
-            height = np.maximum(height, eps)
-            width = np.maximum(width, eps)
-            dy = (base_ctr_y - ctr_y) / height
-            dx = (base_ctr_x - ctr_x) / width
-            dh = np.log(np.abs(base_height / height))
-            dw = np.log(np.abs(base_width / width))
-            gt_roi_locs = np.vstack((dy, dx, dh, dw)).transpose()
-            
-            return sample_roi, gt_roi_locs, gt_roi_labels
-        
-        def generate_sample_rois_test(self, proposal_rois):
-                        ious = np.empty((len(proposal_rois), len(bboxes)), dtype=np.float32)
-            ious.fill(0)
-            for num1, i in enumerate(proposal_rois):
-                ya1, xa1, ya2, xa2 = i  
-                anchor_area = (ya2 - ya1) * (xa2 - xa1)
-                for num2, j in enumerate(bboxes):
-                    yb1, xb1, yb2, xb2 = j
-                    box_area = (yb2- yb1) * (xb2 - xb1)
-                    inter_x1 = max([xb1, xa1])
-                    inter_y1 = max([yb1, ya1])
-                    inter_x2 = min([xb2, xa2])
-                    inter_y2 = min([yb2, ya2])
-                    if (inter_x1 < inter_x2) and (inter_y1 < inter_y2):
-                        iter_area = (inter_y2 - inter_y1) * \
-                                    (inter_x2 - inter_x1)
-                        iou = iter_area / (anchor_area+ \
-                                           box_area - iter_area)            
-                    else:
-                        iou = 0.
-                    ious[num1, num2] = iou
-                        
-            gt_assignment = ious.argmax(axis=1)
-            max_iou = ious.max(axis=1)
+            sample_roi = proposal_rois[keep_index]
+            gt_roi_labels = None
+            gt_assignment = None
+            if train:
+                gt_assignment = ious.argmax(axis=1)
+                gt_roi_label = labels[gt_assignment]
+                gt_roi_labels = gt_roi_label[keep_index]
+                gt_roi_labels[pos_roi_per_this_image:] = 0  # negative labels --> 0
 
-            gt_roi_label = labels[gt_assignment]
+            return sample_roi, gt_assignment, gt_roi_labels
 
-            pos_index = np.where(max_iou >= self.pos_iou_thresh)[0]
-            pos_roi_per_this_image = int(min(self.pos_roi_per_image, pos_index.size))
-            if pos_index.size > 0:
-                pos_index = np.random.choice(
-                    pos_index, size=pos_roi_per_this_image, replace=False)
-
-            neg_index = np.where((max_iou < self.neg_iou_thresh_hi) &
-                                 (max_iou >= self.neg_iou_thresh_lo))[0]
-            neg_roi_per_this_image = self.n_sample - pos_roi_per_this_image
-            neg_roi_per_this_image = int(min(neg_roi_per_this_image,
-                                             neg_index.size))
-            if  neg_index.size > 0 :
-                neg_index = np.random.choice(
-                    neg_index, size=neg_roi_per_this_image, replace=False)
-                    
-            keep_index = np.append(pos_index, neg_index)
-            gt_roi_labels = gt_roi_label[keep_index]
-            gt_roi_labels[pos_roi_per_this_image:] = 0  # negative labels --> 0
-            sample_roi = roi[keep_index]
-            
-            return sample_roi, None, None
-
-        def generate_sample_rois(self, proposal_rois, bboxes = None, labels = None):
-            if self.train:
-                return self.generate_sample_rois_train(proposal_rois, bboxes, labels):
-            else:
-                return self.generate_sample_rois_test(proposal_rois):
-
-        def forward(self, features, bboxes = None, labels = None):
-            if self.train and bboxes is None:
+        def forward(self, features, bboxes = None, anchors=None, labels = None, train=False):
+            if train and bboxes is None:
                 raise ValueError("train is true, but no bbox is passed!!")
-            if self.train and labels is None:
+            if train and labels is None:
                 raise ValueError("train is true, but no label is passed!!")
-            if bboxes is not None and labels is not None:
-                message = "bboxes and labels do not have the same length, but each bbox must have a label!" 
-                assert len(bboxes) == len(labels), message
 
-            proposal_rois = self.generate_proposal_rois(features)
-            return self.generate_sample_rois(proposal_rois, bboxes, labels)
+            proposal_rois = self.generate_proposal_rois(features, anchors)
+            return self.generate_sample_rois(proposal_rois, labels)

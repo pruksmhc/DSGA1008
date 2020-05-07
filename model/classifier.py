@@ -1,12 +1,7 @@
 import torch
 import torch.nn as nn
 
-class classifier(nn.Modules):
-    self.device = None
-    self.number_classes = None
-    self.roi_head_classifier = None
-    self.cls_loc = None
-    self.score = None
+class Classifier(nn.Modules):
 
     def __init__(self, device, number_classes, roi_head_classifier = None, cls_loc = None, score = None):
         self.device = device
@@ -41,4 +36,4 @@ class classifier(nn.Modules):
         pred_class = torch.argmax(roi_cls_score, dim=1)
         preds_bbox = preds[torch.arange(0, 128).long(), pred_class]
         
-        return pred_bbox, pred_class
+        return roi_cls_loc, roi_cls_score, preds_bbox, pred_class

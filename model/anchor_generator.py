@@ -1,13 +1,10 @@
 import torch
+import torch.nn as nn
+import numpy as np
 
 class AnchorGenerator(nn.Module):
-    self.img_size = None
-    self.train = None
-    self.sub_sample = None
-    self.ratios = None
-    self.anchor_scales = None
 
-    def __init__(self, img_size, train = False, sub_sample = 16,
+    def __init__(self, img_size=800, train = False, sub_sample = 16,
                  ratios = [0.5, 1, 2], anchor_scales = [8, 16, 32]):
         super(AnchorGenerator, self).__init__()
         self.img_size = img_size
@@ -15,6 +12,8 @@ class AnchorGenerator(nn.Module):
         self.sub_sample = sub_sample
         self.ratios = ratios
         self.anchor_scales = anchor_scales
+        self.ratios = [0.5, 1, 2]
+        self.anchor_scales = [8, 16, 32]
         
 
     def generate_anchor_boxes_train(self, bboxes):
@@ -53,12 +52,14 @@ class AnchorGenerator(nn.Module):
         valid_anchor_boxes = anchors[index_inside]
         label = np.empty((len(index_inside),), dtype=np.int32)
         label.fill(-1)
-        ious = np.empty((len(valid_anchor_boxes), len(self.bboxes)), dtype=np.float32)
+        if bboxes is None:
+            bboxes = torch.Tensor([[200, 400, 600, 400], [200, 200, 600, 300]])
+        ious = np.empty((len(valid_anchor_boxes), len(bboxes)), dtype=np.float32)
         ious.fill(0)
         for num1, i in enumerate(valid_anchor_boxes):
             ya1, xa1, ya2, xa2 = i
             anchor_area = (ya2 - ya1) * (xa2 - xa1)
-            for num2, j in enumerate(self.bboxes):
+            for num2, j in enumerate(bboxes):
                 yb1, xb1, yb2, xb2 = j
                 box_area = (yb2 - yb1) * (xb2 - xb1)
                 inter_x1 = max([xb1, xa1])
@@ -90,35 +91,35 @@ class AnchorGenerator(nn.Module):
         label[max_ious < neg_iou_threshold] = 0
         label[gt_argmax_ious] = 1
         label[max_ious >= pos_iou_threshold] = 1
-        
-    max_iou_bbox = self.bboxes[argmax_ious]
-    height = valid_anchor_boxes[:, 2] - valid_anchor_boxes[:, 0]
-    width = valid_anchor_boxes[:, 3] - valid_anchor_boxes[:, 1]
-    ctr_y = valid_anchor_boxes[:, 0] + 0.5 * height
-    ctr_x = valid_anchor_boxes[:, 1] + 0.5 * width
-    base_height = max_iou_bbox[:,  2] - max_iou_bbox[:, 0]
-    base_width = max_iou_bbox[:, 3] - max_iou_bbox[:, 1]
-    base_ctr_y = max_iou_bbox[:, 0] + 0.5 * base_height
-    base_ctr_x = max_iou_bbox[:, 1] + 0.5 * base_width
-    
-    eps = np.finfo(height.dtype).eps
-    height = np.maximum(height, eps)
-    width = np.maximum(width, eps)
-    dy = (base_ctr_y - ctr_y) / height
-    dx = (base_ctr_x - ctr_x) / width
-    dh = np.log(abs(base_height / height))
-    dw = np.log(abs(base_width / width))
-    anchor_locs = np.vstack((dy, dx, dh, dw)).transpose()
-    
-    anchor_labels = np.empty((len(anchors),), dtype=label.dtype)
-    anchor_labels.fill(-1)
-    anchor_labels[index_inside] = label
-    
-    anchor_locations = np.empty((len(anchors),) + anchors.shape[1:], dtype=anchor_locs.dtype)
-    anchor_locations.fill(0)
-    anchor_locations[index_inside, :] = anchor_locs
-    
-    return anchor_locations, anchor_labels
+
+        max_iou_bbox = bboxes[argmax_ious]
+        height = valid_anchor_boxes[:, 2] - valid_anchor_boxes[:, 0]
+        width = valid_anchor_boxes[:, 3] - valid_anchor_boxes[:, 1]
+        ctr_y = valid_anchor_boxes[:, 0] + 0.5 * height
+        ctr_x = valid_anchor_boxes[:, 1] + 0.5 * width
+        base_height = max_iou_bbox[:,  2] - max_iou_bbox[:, 0]
+        base_width = max_iou_bbox[:, 3] - max_iou_bbox[:, 1]
+        base_ctr_y = max_iou_bbox[:, 0] + 0.5 * base_height
+        base_ctr_x = max_iou_bbox[:, 1] + 0.5 * base_width
+
+        eps = np.finfo(height.dtype).eps
+        height = np.maximum(height, eps)
+        width = np.maximum(width, eps)
+        dy = (base_ctr_y - ctr_y) / height
+        dx = (base_ctr_x - ctr_x) / width
+        dh = np.log(abs(base_height / height))
+        dw = np.log(abs(base_width / width))
+        anchor_locs = np.vstack((dy, dx, dh, dw)).transpose()
+
+        anchor_labels = np.empty((len(anchors),), dtype=label.dtype)
+        anchor_labels.fill(-1)
+        anchor_labels[index_inside] = label
+
+        anchor_locations = np.empty((len(anchors),) + anchors.shape[1:], dtype=anchor_locs.dtype)
+        anchor_locations.fill(0)
+        anchor_locations[index_inside, :] = anchor_locs
+
+        return anchor_locations, anchor_labels, anchors
 
     def generate_anchor_boxes_test(self):
         raise NotImplementedError()
