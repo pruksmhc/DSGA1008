@@ -15,7 +15,7 @@ def transform_bounding_box(self, bboxes):
         new_bboxes.append([min(y1, y2), min(x1, x2), max(y1, y2), max(x1,x2)])
     return torch.Tensor(new_bboxes)
 
-def transform_sample(samples):
+def transform_samples(samples):
     return torch.stack([torchvision.utils.make_grid(
         torch.stack([batch_data[i][0], batch_data[i][1], batch_data[i][2],
                      torch.flip(batch_data[i][3],[1,2]),torch.flip(batch_data[i][4],[1,2]),

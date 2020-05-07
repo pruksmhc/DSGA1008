@@ -7,19 +7,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from utils import transform_bounding_box
+from utils import transform_back_bounding_boxes, transform_samples
 
 # import your model class
 # import ...
 
 # Put your transform function here, we will use it for our dataloader
 def get_transform(): 
+    return torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
     # return torchvision.transforms.Compose([
     # 
     # 
     # ])
-    pass
-
+    
 class ModelLoader():
     # Fill the information for your team
     team_name = ''
@@ -60,10 +60,10 @@ class ModelLoader():
         # You need to return a tuple with size 'batch_size' and each element is a cuda tensor [N, 2, 4]
         # where N is the number of object
 
-        bboxes = self.bbox_model.forward(transform_samples(samples))
+        bboxes = self.bbox_model.forward(transform_samples(samples).to(device))
         return transform_back_bounding_boxes(bboxes)
 
     def get_binary_road_map(samples):
         # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
         # You need to return a cuda tensor with size [batch_size, 800, 80] 
-        return self.lane_model.forward(transform_samples(samples))
+        return self.lane_model.forward(transform_samples(samples).to(device))
