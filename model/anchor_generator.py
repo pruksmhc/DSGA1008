@@ -4,11 +4,10 @@ import numpy as np
 
 class AnchorGenerator(nn.Module):
 
-    def __init__(self, img_size=800, train = False, sub_sample = 16,
+    def __init__(self, img_size=800,  sub_sample = 16,
                  ratios = [0.5, 1, 2], anchor_scales = [8, 16, 32]):
         super(AnchorGenerator, self).__init__()
         self.img_size = img_size
-        self.train = train
         self.sub_sample = sub_sample
         self.ratios = ratios
         self.anchor_scales = anchor_scales
@@ -16,7 +15,7 @@ class AnchorGenerator(nn.Module):
         self.anchor_scales = [8, 16, 32]
         
 
-    def generate_anchor_boxes_train(self, bboxes):
+    def generate_anchor_boxes(self, bboxes, train):
         #number of anchors per center
         n_anchors = len(self.ratios) * len(self.anchor_scales)
         fe_size = (self.img_size // self.sub_sample)
@@ -74,22 +73,21 @@ class AnchorGenerator(nn.Module):
                 else:
                     iou = 0.
                 ious[num1, num2] = iou
-        
-        #the highest iou for each gt_box and its corresponding anchor box
-        gt_argmax_ious = ious.argmax(axis=0)
-        gt_max_ious = ious[gt_argmax_ious, np.arange(ious.shape[1])]
 
+        if train:
+            # the highest iou for each gt_box and its corresponding anchor box
+            gt_argmax_ious = ious.argmax(axis=0)
+            gt_max_ious = ious[gt_argmax_ious, np.arange(ious.shape[1])]
+            # find the anchor_boxes which have this max_ious (gt_max_ious)
+            gt_argmax_ious = np.where(ious == gt_max_ious)[0]
+            label[gt_argmax_ious] = 1
         #the highest iou for each anchor box and its corresponding ground truth box
         argmax_ious = ious.argmax(axis=1)
         max_ious = ious[np.arange(len(index_inside)), argmax_ious]
-                
-        #find the anchor_boxes which have this max_ious (gt_max_ious)
-        gt_argmax_ious = np.where(ious == gt_max_ious)[0]
 
         pos_iou_threshold  = 0.7
         neg_iou_threshold = 0.3
         label[max_ious < neg_iou_threshold] = 0
-        label[gt_argmax_ious] = 1
         label[max_ious >= pos_iou_threshold] = 1
 
         max_iou_bbox = bboxes[argmax_ious]
@@ -124,10 +122,6 @@ class AnchorGenerator(nn.Module):
     def generate_anchor_boxes_test(self):
         raise NotImplementedError()
 
-    def forward(self, bboxes = None):
-        if self.train and bboxes is None:
-            raise  ValueError("train is true, but noo bbox is passed!")
-        if self.train:
-            return self.generate_anchor_boxes_train(bboxes)
-        return self.generate_anchor_boxes_test()
+    def forward(self, bboxes = None, train=False):
+        return self.generate_anchor_boxes_test(bboxes, train)
         

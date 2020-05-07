@@ -6,6 +6,7 @@ import torchvision.models as models
 from anchor_generator import AnchorGenerator
 from region_proposal_network import RegionProposalNetwork
 from max_pooling_layer import MaxPoolingLayer
+from classifier import Classifier
 
 """
 Adapted from: https://medium.com/@fractaldle/guide-to-build-faster-rcnn-in-pytorch-95b10c273439
@@ -14,32 +15,26 @@ device = "cuda"
 
 class FasterRCNNBoundingBox(nn.Module):
 
-    def __init__(self, train = False, device = None, img_size = 800, 
+    def __init__(self, device = None, img_size = 800,
                  rpn_in_features = 512, backbone = None, region_proposal_network = None,
-                 max_pooling_layer = None, classifier = None):
-        super(FasterRCNN, self).__init__()
-        self.train = None
+                 max_pooling_layer = None):
+        super(FasterRCNNBoundingBox, self).__init__()
         self.device = device
-        self.backbone = None
-        self.train = train
+        self.classifier = Classifier(device, number_classes=9)
         if backbone is None:
             self.backbone = models.alexnet(pretrained=False, num_classes=4).to(device)
-        
-            # model.load_state_dict(torch.load(PATH))
+
             state_dict_file = "alexnet_5.pkl"
             if torch.cuda.is_available():
-                self.alexnet.load_state_dict(torch.load(state_dict_file))
+                self.backbone.load_state_dict(torch.load(state_dict_file))
             else:
-                self.alexnet.load_state_dict(torch.load(state_dict_file,
+                self.backbone.load_state_dict(torch.load(state_dict_file,
                                                         map_location=torch.device('cpu')))
         else:
             self.backbone = backbone
 
         self.img_size = img_size
-        if anchor_generator is None:
-            self.anchor_generator = AnchorGenerator(self.img_size, train = self.train)
-        else:
-            self.anchor_generator = anchor_generator
+        self.anchor_generator = AnchorGenerator(self.img_size )
 
         self.rpn_in_features = rpn_in_features
         if region_proposal_network is None:
@@ -67,7 +62,7 @@ class FasterRCNNBoundingBox(nn.Module):
             Output locations, output scores, and a bunch of things you need to calculate the loss.
         """
         # This is a transformed sample.
-        img_features = self.alexnet.features(samples[0].to(device))
+        img_features = self.backbone.features(samples[0].to(device))
         img_features = torch.nn.functional.interpolate(img_features, size=(512,50,50))[0]
         # Generate anchor boxes
         anchor_locations, anchor_labels, anchors = self.achor_generator.forward(bboxes)

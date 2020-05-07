@@ -52,8 +52,8 @@ class RegionProposalNetwork(nn.Module):
         else:
             self.cls_layer = cls_layer
 
-        def generate_proposal_rois(self, features, anchors):
-            if self.train:
+        def generate_proposal_rois(self, features, anchors, train):
+            if train:
                 pre_nms = self.n_train_pre_nms
                 post_nms = self.n_train_post_nms
             else:
@@ -196,5 +196,5 @@ class RegionProposalNetwork(nn.Module):
             if train and labels is None:
                 raise ValueError("train is true, but no label is passed!!")
 
-            proposal_rois = self.generate_proposal_rois(features, anchors)
+            proposal_rois = self.generate_proposal_rois(features, anchors, train)
             return self.generate_sample_rois(proposal_rois, labels)

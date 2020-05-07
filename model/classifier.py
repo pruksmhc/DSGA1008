@@ -25,11 +25,11 @@ class Classifier(nn.Modules):
         else:
             self.score = score
 
-    def forward(output):
+    def forward(self, output):
         k = output.view(output.size(0), -1)
-        k = roi_head_classifier(k)
-        roi_cls_loc = cls_loc(k)
-        roi_cls_score = score(k)
+        k = self.roi_head_classifier(k)
+        roi_cls_loc = self.cls_loc(k)
+        roi_cls_score = self.score(k)
         
         preds = roi_cls_loc.view(128, -1, 4)
         
