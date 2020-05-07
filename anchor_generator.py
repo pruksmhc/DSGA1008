@@ -99,14 +99,14 @@ class AnchorGenerator(nn.Module):
         base_width = max_iou_bbox[:, 3] - max_iou_bbox[:, 1]
         base_ctr_y = max_iou_bbox[:, 0] + 0.5 * base_height
         base_ctr_x = max_iou_bbox[:, 1] + 0.5 * base_width
-
+        
         eps = np.finfo(height.dtype).eps
         height = np.maximum(height, eps)
         width = np.maximum(width, eps)
         dy = (base_ctr_y - ctr_y) / height
         dx = (base_ctr_x - ctr_x) / width
-        dh = np.log(abs(base_height / height))
-        dw = np.log(abs(base_width / width))
+        dh = np.log(abs(base_height / height)+0.0005)
+        dw = np.log(abs(base_width / width) + 0.005)
         anchor_locs = np.vstack((dy, dx, dh, dw)).transpose()
 
         anchor_labels = np.empty((len(anchors),), dtype=label.dtype)
@@ -119,9 +119,7 @@ class AnchorGenerator(nn.Module):
 
         return anchor_locations, anchor_labels, anchors
 
-    def generate_anchor_boxes_test(self):
-        raise NotImplementedError()
 
     def forward(self, bboxes = None, train=False):
-        return self.generate_anchor_boxes_test(bboxes, train)
+        return self.generate_anchor_boxes(bboxes, train)
         

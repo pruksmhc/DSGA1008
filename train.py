@@ -49,7 +49,6 @@ labeled_trainset = LabeledDataset(image_folder=image_folder,
                                  )
 
 trainloader = torch.utils.data.DataLoader(labeled_trainset, batch_size=2, shuffle=True, num_workers=1, collate_fn=collate_fn)
-samples1, targets1, road_images1, extra1 = next(iter(trainloader))
 def rebatchify(batch_data):
       batch_data, targets, batch_road, extra = batch_data
       batch_size = len(batch_data)
@@ -58,7 +57,7 @@ def rebatchify(batch_data):
                 torch.flip(batch_data[i][3],[1,2]),torch.flip(batch_data[i][4],[1,2]),
                 torch.flip(batch_data[i][5],[1,2])]), nrow = 3, padding = 0)
                 for i in range(batch_size)]), targets, torch.stack(batch_road).long(), extra
-#rebatched_samples = rebatchify(samples1)
+samples1, targets1, road_images1, extra1 = rebatchify(next(iter(trainloader)))
 model(samples1, train=False)
 
 

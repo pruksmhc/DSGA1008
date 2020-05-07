@@ -43,10 +43,7 @@ class FasterRCNNBoundingBox(nn.Module):
         self.anchor_generator = AnchorGenerator(self.img_size )
 
         self.rpn_in_features = rpn_in_features
-        if region_proposal_network is None:
-            self.region_proposal_network = RegionProposalNetwork(self.rpn_in_features, self.device)
-        else:
-            self.region_proposal_network = region_proposal_network
+        self.region_proposal_network = RegionProposalNetwork(self.rpn_in_features, self.device)
 
         if max_pooling_layer is None:
             self.max_pooling_layer = MaxPoolingLayer(sub_sample = self.sub_sample)
@@ -68,20 +65,19 @@ class FasterRCNNBoundingBox(nn.Module):
             Output locations, output scores, and a bunch of things you need to calculate the loss.
         """
         import pdb; pdb.set_trace()
-        img_features = self.backbone.features(samples[0].to(device))
-        img_features = torch.nn.functional.interpolate(img_features, size=(512,50,50))[0]
+        img_features = self.backbone.features(samples.to(device))
+        img_features = torch.nn.functional.interpolate(img_features[None], size=(512,50,50))[0]
 
         
         # Generate anchor boxes
-        anchor_locations, anchor_labels, anchors = self.achor_generator.forward(bboxes)
+        anchor_locations, anchor_labels, anchors = self.anchor_generator.forward(bboxes)
         
-        sample_rois, gt_roi_locs, gt_roi_labels = self.region_proposal_network(img_features, bboxes, anchors, labels)
+        sample_rois, gt_roi_locs, gt_roi_labels = self.region_proposal_network.forward(img_features, bboxes, anchors, labels)
 
-        output = self.max_pooling_layer(sample_rois, img_features)
-        import pdb; pdb.set_trace()
+        output = self.max_pooling_layer.forward(sample_rois, img_features)
         if train:
             # Get the logits
-            output_loc, output_score, _, _ = self.classifier(output)
+            output_loc, output_score, _, _ = self.classifier.forward(output)
         else:
             # Get the predictions
             _, _, output_loc, output_score = self.classifier(output)
