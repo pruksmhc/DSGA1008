@@ -3,9 +3,13 @@ import torch.autograd as autograd
 import torch.nn as nn
 import pdb
 import torchvision.models as models
+import anchor_generator
 from anchor_generator import AnchorGenerator
+import region_proposal_network
 from region_proposal_network import RegionProposalNetwork
+import max_pooling_layer
 from max_pooling_layer import MaxPoolingLayer
+import classifier
 from classifier import Classifier
 
 """
@@ -17,19 +21,21 @@ class FasterRCNNBoundingBox(nn.Module):
 
     def __init__(self, device = None, img_size = 800,
                  rpn_in_features = 512, backbone = None, region_proposal_network = None,
-                 max_pooling_layer = None):
+                 max_pooling_layer = None, sub_sample=16):
         super(FasterRCNNBoundingBox, self).__init__()
         self.device = device
+        self.sub_sample = sub_sample
         self.classifier = Classifier(device, number_classes=9)
         if backbone is None:
             self.backbone = models.alexnet(pretrained=False, num_classes=4).to(device)
-
+            """
             state_dict_file = "alexnet_5.pkl"
             if torch.cuda.is_available():
                 self.backbone.load_state_dict(torch.load(state_dict_file))
             else:
                 self.backbone.load_state_dict(torch.load(state_dict_file,
                                                         map_location=torch.device('cpu')))
+           """ 
         else:
             self.backbone = backbone
 
@@ -38,7 +44,7 @@ class FasterRCNNBoundingBox(nn.Module):
 
         self.rpn_in_features = rpn_in_features
         if region_proposal_network is None:
-            self.region_proposal_network = RegionProposalNetwork(self.rpn_in_features, self.device, train = self.train)
+            self.region_proposal_network = RegionProposalNetwork(self.rpn_in_features, self.device)
         else:
             self.region_proposal_network = region_proposal_network
 
@@ -61,16 +67,18 @@ class FasterRCNNBoundingBox(nn.Module):
         Returns:
             Output locations, output scores, and a bunch of things you need to calculate the loss.
         """
-        # This is a transformed sample.
+        import pdb; pdb.set_trace()
         img_features = self.backbone.features(samples[0].to(device))
         img_features = torch.nn.functional.interpolate(img_features, size=(512,50,50))[0]
+
+        
         # Generate anchor boxes
         anchor_locations, anchor_labels, anchors = self.achor_generator.forward(bboxes)
         
         sample_rois, gt_roi_locs, gt_roi_labels = self.region_proposal_network(img_features, bboxes, anchors, labels)
 
         output = self.max_pooling_layer(sample_rois, img_features)
-
+        import pdb; pdb.set_trace()
         if train:
             # Get the logits
             output_loc, output_score, _, _ = self.classifier(output)

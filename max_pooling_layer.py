@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-class MaxPoolingLayer(nn.Modules):
+class MaxPoolingLayer(nn.Module):
 
     def __init__(self, size = 7, sub_sample = 16, adaptive_max_pool = None):
         super(MaxPoolingLayer, self).__init__()

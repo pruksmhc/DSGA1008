@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 
-class Classifier(nn.Modules):
+class Classifier(nn.Module):
 
     def __init__(self, device, number_classes, roi_head_classifier = None, cls_loc = None, score = None):
+        super(Classifier, self).__init__()
         self.device = device
         self.number_classes = number_classes
         
@@ -15,8 +16,8 @@ class Classifier(nn.Modules):
 
         if cls_loc is None:
             self.cls_loc = nn.Linear(4096, self.number_classes * 4).to(device) 
-            cls_loc.weight.data.normal_(0.01)
-            cls_loc.bias.data.zero_()
+            self.cls_loc.weight.data.normal_(0.01)
+            self.cls_loc.bias.data.zero_()
         else:
             self.cls_loc = cls_loc
 

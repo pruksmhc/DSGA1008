@@ -33,22 +33,22 @@ class RegionProposalNetwork(nn.Module):
         if conv1 is None:
             self.conv1 = nn.Conv2d(in_channels, mid_channels, 3, 1, 1).to(device)
             # conv sliding layer
-            conv1.weight.data.normal_(0, 0.01)
-            conv1.bias.data.zero_()
+            self.conv1.weight.data.normal_(0, 0.01)
+            self.conv1.bias.data.zero_()
         else:
             self.conv1 = conv1
         if reg_layer  is None:
             self.reg_layer = nn.Conv2d(mid_channels, n_anchor *4, 1, 1, 0).to(device)
             # Regression layer
-            reg_layer.weight.data.normal_(0, 0.01)
-            reg_layer.bias.data.zero_()
+            self.reg_layer.weight.data.normal_(0, 0.01)
+            self.reg_layer.bias.data.zero_()
         else:
             self.reg_layer = reg_layer
         if cls_layer is None:
             self.cls_layer = nn.Conv2d(mid_channels, n_anchor *2, 1, 1, 0).to(device)
             # classification layer
-            cls_layer.weight.data.normal_(0, 0.01)
-            cls_layer.bias.data.zero_()
+            self.cls_layer.weight.data.normal_(0, 0.01)
+            self.cls_layer.bias.data.zero_()
         else:
             self.cls_layer = cls_layer
 

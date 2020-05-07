@@ -1,5 +1,5 @@
-from model import model
-from model.model import FasterRCNNBoundingBox
+
+from model import FasterRCNNBoundingBox
 import torch
 ##### import os
 import random
@@ -49,8 +49,16 @@ labeled_trainset = LabeledDataset(image_folder=image_folder,
                                  )
 
 trainloader = torch.utils.data.DataLoader(labeled_trainset, batch_size=2, shuffle=True, num_workers=1, collate_fn=collate_fn)
-samples, targets, road_image, extra = next(iter(trainloader))
-model(samples, train=False)
-
+samples1, targets1, road_images1, extra1 = next(iter(trainloader))
+def rebatchify(batch_data):
+      batch_data, targets, batch_road, extra = batch_data
+      batch_size = len(batch_data)
+      return torch.stack([torchvision.utils.make_grid(
+                torch.stack([batch_data[i][0], batch_data[i][1], batch_data[i][2],
+                torch.flip(batch_data[i][3],[1,2]),torch.flip(batch_data[i][4],[1,2]),
+                torch.flip(batch_data[i][5],[1,2])]), nrow = 3, padding = 0)
+                for i in range(batch_size)]), targets, torch.stack(batch_road).long(), extra
+#rebatched_samples = rebatchify(samples1)
+model(samples1, train=False)
 
 
