@@ -25,19 +25,20 @@ def get_transform():
 
 class ModelLoader():
     # Fill the information for your team
-    team_name = ''
-    team_member = []
-    contact_email = '@nyu.edu'
+    team_name = 'Radio Station WXYB'
+    team_member = [Xiaoyi Zhang, Yada Pruksachatkun, 
+                   Weicheng Zhu, Brian Kelly]
+    contact_email = 'bak438@nyu.edu'
 
     def __init__(self, model_file="models"):
         
-        # self.bbox_model = FasterRCNN()
+        # self.bbox_model = FasterRCNNBoundingBox()
         # state_dict_file_lane = 'state_dict_faster_rcnn.pkl'
         # if torch.cuda.is_available():
-        #    self.model.load_state_dict(torch.load(state_dict_file_bbox)))
+        #    self.model.load_state_dict(torch.load(state_dict_file_bbox))
         # else:
         #    self.model.load_state_dict(state_dict_file,
-        #                               map_location=torch.device('cpu')))
+        #                               map_location=torch.device('cpu'))
         # self.bbox_model = self.bbox_model.to(device)
 
         self.detector = ObjectDetector(num_classes = 10, pretrained=False)
@@ -73,6 +74,7 @@ class ModelLoader():
         self.bbox_model.eval()
         outputs = self.bbox_model.forward(transform_samples(samples).to(device))
         return [self.detector.boxes2targets(t['boxes']) for t in outputs]
+
 
     def get_binary_road_map(self, samples):
         # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]

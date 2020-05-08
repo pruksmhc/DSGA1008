@@ -22,6 +22,7 @@ import torchvision.models as models
 from tqdm import tqdm
 from data_helper import UnlabeledDataset, LabeledDataset
 from helper import collate_fn, draw_box
+from utils import transform_back_bounding_boxes
 random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
@@ -35,7 +36,6 @@ labeled_scene_index = np.arange(106, 134)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 model = FasterRCNNBoundingBox(device=device)
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 transform = torchvision.transforms.ToTensor()
 transforms_list_augmentation = transforms.Compose([transforms.Resize(256),
                                                     transforms.RandomCrop(224),
@@ -59,7 +59,9 @@ def rebatchify(batch_data):
                 for i in range(batch_size)]), targets, torch.stack(batch_road).long(), extra
 samples1, targets1, road_images1, extra1 = rebatchify(next(iter(trainloader)))
 PATH = 'state_dict_faster_rcnn.pkl'
-#torch.load_state_dict(torch.load(PATH))
-model(samples1)
+model.load_state_dict(torch.load(PATH))
+output_loc, output_score, anchor_locations, anchor_labels, gt_roi_locs, gt_roi_labels = model(samples1.to(device))
+boxes = transform_back_bounding_boxes(output_loc)
+print(boxes.shape)
 #torch.save(model.state_dict(), PATH)
 
