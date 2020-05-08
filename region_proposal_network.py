@@ -15,13 +15,13 @@ class RegionProposalNetwork(nn.Module):
         self.device = device
         self.mid_channels = mid_channels
         self.n_anchor = n_anchor
-        self.image_size = image_size
+        self.img_size = image_size
         self.nms_thresh = nms_thresh
         self.min_size = min_size
         self.n_train_pre_nms = n_train_pre_nms
         self.n_train_post_nms = n_train_post_nms
-        self.n_test_pre_nms = n_test_pre_nms
-        self.n_test_post_nms = n_test_post_nms
+        self.n_test_pre_nms = n_train_post_nms
+        self.n_test_post_nms = n_train_post_nms
         
         self.n_sample = n_sample
         self.pos_ratio = pos_ratio
@@ -63,7 +63,7 @@ class RegionProposalNetwork(nn.Module):
         pred_anchor_locs = self.reg_layer(x)
         pred_cls_scores = self.cls_layer(x)
         batch_size = pred_cls_scores.shape[0]
-        pred_anchor_locs = pred_anchor_locs.permute(0, 2, 3, 1).contiguous().view(1, -1, 4)
+        pred_anchor_locs = pred_anchor_locs.permute(0, 2, 3, 1).contiguous().view(batch_size, -1, 4)
         #Out: torch.Size([1, 22500, 4])
         pred_cls_scores = pred_cls_scores.permute(0, 2, 3, 1).contiguous()
         #Out torch.Size([1, 50, 50, 18])
@@ -100,10 +100,10 @@ class RegionProposalNetwork(nn.Module):
 
         hs = roi[:, 2] - roi[:, 0]
         ws = roi[:, 3] - roi[:, 1]
-        keep = np.where((hs >= min_size) & (ws >= min_size))[0]
+        keep = np.where((hs >= self.min_size) & (ws >= self.min_size))[0]
         roi = roi[keep, :]
         score = objectness_score_numpy[keep]
-
+        import pdb; pdb.set_trace()
         order = score.ravel().argsort()[::-1]
         order = order[:pre_nms]
         roi = roi[order, :]
@@ -113,8 +113,9 @@ class RegionProposalNetwork(nn.Module):
         y2 = roi[:, 2]
         x2 = roi[:, 3]
         area = (x2 - x1 + 1) * (y2 - y1 + 1)
-        order = score[:n_train_pre_nms].argsort()[::-1]
+        order = score[:self.n_train_pre_nms].argsort()[::-1]
         keep = []
+        import pdb; pdb.set_trace()
         while order.size > 0:
             #print(order.size)
             i = order[0]
@@ -130,10 +131,10 @@ class RegionProposalNetwork(nn.Module):
 
             inter = w * h
             ovr = inter / (area[i] + area[order[1:]] - inter)
-            inds = np.where(ovr <= nms_thresh)[0]
+            inds = np.where(ovr <= self.nms_thresh)[0]
             order = order[inds + 1]
 
-            keep = keep[:post_nms] # while training/testing , use accordingly
+            keep = keep[:self.post_nms] # while training/testing , use accordingly
             roi = roi[keep] # the final region proposals
 
         return roi
