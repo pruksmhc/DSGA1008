@@ -1,7 +1,7 @@
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
-import pdb
+
 import torchvision.models as models
 import anchor_generator
 from anchor_generator import AnchorGenerator
@@ -64,7 +64,7 @@ class FasterRCNNBoundingBox(nn.Module):
         Returns:
             Output locations, output scores, and a bunch of things you need to calculate the loss.
         """
-        import pdb#; pdb.set_trace()
+
         img_features = self.backbone.features(samples.to(device))
         img_features = torch.nn.functional.interpolate(img_features[None], size=(512,50,50))[0]
 

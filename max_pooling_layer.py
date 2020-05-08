@@ -14,7 +14,7 @@ class MaxPoolingLayer(nn.Module):
             self.adaptive_max_pool = adaptive_max_pool
 
     def forward(self, sample_rois, img_features):
-        import pdb;pdb.set_trace()
+
         size = (7, 7)
         adaptive_max_pool = nn.AdaptiveMaxPool2d((size[0], size[1]))
         rois = torch.from_numpy(sample_rois).float()

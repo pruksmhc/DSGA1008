@@ -70,7 +70,7 @@ class RegionProposalNetwork(nn.Module):
         objectness_score = pred_cls_scores.view(batch_size, 50, 50, 9, 2)[:, :, :, :, 1].contiguous().view(1, -1)
         #Out torch.Size([1, 22500])
         pred_cls_scores  = pred_cls_scores.view(batch_size, -1, 2)
-        import pdb; pdb.set_trace()
+
         anc_height = anchors[:, 2] - anchors[:, 0]
         anc_width = anchors[:, 3] - anchors[:, 1]
         anc_ctr_y = anchors[:, 0] + 0.5 * anc_height
@@ -103,7 +103,7 @@ class RegionProposalNetwork(nn.Module):
         keep = np.where((hs >= self.min_size) & (ws >= self.min_size))[0]
         roi = roi[keep, :]
         score = objectness_score_numpy[keep]
-        import pdb; pdb.set_trace()
+
         order = score.ravel().argsort()[::-1]
         order = order[:pre_nms]
         roi = roi[order, :]
@@ -115,7 +115,7 @@ class RegionProposalNetwork(nn.Module):
         area = (x2 - x1 + 1) * (y2 - y1 + 1)
         order = score[:pre_nms].argsort()[::-1]
         keep = []
-        import pdb; pdb.set_trace()
+
         while order.size > 0:
             #print(order.size)
             i = order[0]
