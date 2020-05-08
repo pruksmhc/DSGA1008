@@ -16,11 +16,13 @@ def transform_bounding_box(self, bboxes):
     return torch.Tensor(new_bboxes)
 
 def transform_samples(samples):
-    return torch.stack([torchvision.utils.make_grid(
+    batch_data = samples
+    batch_size = len(batch_data)
+    return torch.nn.functional.interpolate(torch.stack([torchvision.utils.make_grid(
         torch.stack([batch_data[i][0], batch_data[i][1], batch_data[i][2],
-                     torch.flip(batch_data[i][3],[1,2]),torch.flip(batch_data[i][4],[1,2]),
-                     torch.flip(batch_data[i][5],[1,2])]), nrow = 3, padding = 0)
-                        for i in range(batch_size)])
+        torch.flip(batch_data[i][3],[1,2]),torch.flip(batch_data[i][4],[1,2]),
+        torch.flip(batch_data[i][5],[1,2])]), nrow = 3, padding = 0)
+        for i in range(batch_size)]), (800, 800), mode="bilinear")
 
 def transform_back_bounding_boxes(bboxes):
     output = torch.zeros([len(bboxes),2,4], dtype=torch.double)

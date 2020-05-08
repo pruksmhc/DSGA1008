@@ -11,43 +11,41 @@ from utils import transform_back_bounding_boxes, transform_samples
 
 # import your model class
 # import ...
+from roadmap import * 
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 # Put your transform function here, we will use it for our dataloader
 def get_transform(): 
-    return torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
-    # return torchvision.transforms.Compose([
-    # 
-    # 
-    # ])
-    
+    return transforms.Compose([
+                       transforms.ToTensor(),
+                       transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                            std=[0.229, 0.224, 0.225])
+                   ])
+
 class ModelLoader():
     # Fill the information for your team
     team_name = ''
     team_member = []
     contact_email = '@nyu.edu'
 
-    self.bbox_model = None
-    self.lane_model = None
-
-    def __init__(model_file):
-        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-        self.bbox_model = FasterRCNN()
-        #state_dict_file_lane = 'state_dict_faster_rcnn.pkl'
-        #if torch.cuda.is_available():
+    def __init__(self, model_file="models"):
+        
+        # self.bbox_model = FasterRCNN()
+        # state_dict_file_lane = 'state_dict_faster_rcnn.pkl'
+        # if torch.cuda.is_available():
         #    self.model.load_state_dict(torch.load(state_dict_file_bbox)))
-        #else:
+        # else:
         #    self.model.load_state_dict(state_dict_file,
         #                               map_location=torch.device('cpu')))
-        self.bbox_model = self.bbox_model.to(device)
+        # self.bbox_model = self.bbox_model.to(device)
 
-        self.lane_model = 
-        #state_dict_file_lane = 'state_dict_lane.pkl'
-        #if torch.cuda.is_available():
-        #    self.model.load_state_dict(torch.load(state_dict_file_lane)))
-        #else:
-        #    self.model.load_state_dict(state_dict_file_lane,
-        #                               map_location=torch.device('cpu')))# You should 
+        self.lane_model = Unet(backbone_name='resnet101', pretrained=False, encoder_freeze=False, classes=2)
+        state_dict_file_lane = model_file + '/state_dict_road_map.pkl'
+        if torch.cuda.is_available():
+           self.lane_model.load_state_dict(torch.load(state_dict_file_lane))
+        else:
+           self.lane_model.load_state_dict(torch.load(state_dict_file_lane,
+                                      map_location=torch.device('cpu')))
         self.lane_model = self.lane_model.to(device)
         #       1. create the model object
         #       2. load your state_dict
@@ -55,7 +53,7 @@ class ModelLoader():
         # self.model = ...
         # 
 
-    def get_bounding_boxes(samples):
+    def get_bounding_boxes(self, samples):
         # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
         # You need to return a tuple with size 'batch_size' and each element is a cuda tensor [N, 2, 4]
         # where N is the number of object
@@ -63,7 +61,10 @@ class ModelLoader():
         bboxes = self.bbox_model.forward(transform_samples(samples).to(device))
         return transform_back_bounding_boxes(bboxes)
 
-    def get_binary_road_map(samples):
+    def get_binary_road_map(self, samples):
         # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
         # You need to return a cuda tensor with size [batch_size, 800, 80] 
-        return self.lane_model.forward(transform_samples(samples).to(device))
+        return torch.max(self.lane_model.forward(transform_samples(samples).to(device)).data, 1)[1]
+
+
+
