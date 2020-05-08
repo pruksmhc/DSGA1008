@@ -58,6 +58,8 @@ def rebatchify(batch_data):
                 torch.flip(batch_data[i][5],[1,2])]), nrow = 3, padding = 0)
                 for i in range(batch_size)]), targets, torch.stack(batch_road).long(), extra
 samples1, targets1, road_images1, extra1 = rebatchify(next(iter(trainloader)))
-model(samples1, train=False)
-
+PATH = 'state_dict_faster_rcnn.pkl'
+#torch.load_state_dict(torch.load(PATH))
+model(samples1)
+#torch.save(model.state_dict(), PATH)
 

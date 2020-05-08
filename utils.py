@@ -50,3 +50,9 @@ def rebatchify(batch_data):
   batch_road = torch.stack(batch_road).long()
   extra = extra
   return  batch_data, targets, batch_road, extra
+
+
+def regression_loss(predicted, ground_truth):
+  x = torch.abs(predicted - ground_truth)
+  loss = ((x < 1).float() * 0.5 * x**2) + ((x >= 1).float() * (x-0.5))
+  return loss.sum()

@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
+from utils import regression_loss
 
 class RegionProposalNetwork(nn.Module):
 
@@ -9,7 +11,7 @@ class RegionProposalNetwork(nn.Module):
                  n_train_post_nms = 2000, n_test_pre_nms = 6000, n_test_post_nms = 300,
                  conv1 = None, reg_layer = None, cls_layer = None,
                  n_sample = 128, pos_ratio = 0.25, pos_iou_thresh = 0.5, neg_iou_thresh_hi = 0.5,
-                 neg_iou_thresh_lo = 0.0, pos_roi_per_image = 32):
+                 neg_iou_thresh_lo = 0.0, pos_roi_per_image = 32, roi_lambda = 10):
         super(RegionProposalNetwork, self).__init__()
         self.in_channels = in_channels
         self.device = device
@@ -29,6 +31,12 @@ class RegionProposalNetwork(nn.Module):
         self.neg_iou_thresh_hi = neg_iou_thresh_hi
         self.neg_iou_thresh_lo = neg_iou_thresh_lo
         self.pos_roi_per_image = pos_roi_per_image
+
+        self.pred_anchor_locs = None
+        self.pred_cls_scores = None
+        self.roi_lambda = None
+
+        self.rpn_loss = None
 
         if conv1 is None:
             self.conv1 = nn.Conv2d(in_channels, mid_channels, 3, 1, 1).to(self.device)
@@ -52,6 +60,33 @@ class RegionProposalNetwork(nn.Module):
         else:
             self.cls_layer = cls_layer
 
+    def get_rpn_loss(self):
+        return self.rpn_loss
+
+    def compute_rpn_loss(anchor_locations, anchor_labels):
+        #classification loss
+        rpn_loc = self.pred_anchor_locs[0].to(device)
+        rpn_score = self.pred_cls_scores[0].to(device)
+        gt_rpn_loc = torch.from_numpy(anchor_locations).to(device)
+        gt_rpn_score = torch.from_numpy(anchor_labels).to(device)
+
+        rpn_cls_loss = F.cross_entropy(rpn_score, gt_rpn_score.long(), ignore_index = -1)
+        
+        #regression loss
+        pos = gt_rpn_score > 0
+        mask = pos.unsqueeze(1).expand_as(rpn_loc)
+        
+        mask_loc_preds = rpn_loc[mask].view(-1, 4)
+        mask_loc_targets = gt_rpn_loc[mask].view(-1, 4)
+        rpn_loc_loss = regression_loss(mask_loc_preds, mask_loc_targets)
+
+        #regularize loss
+        N_reg = (gt_rpn_score >0).float().sum()
+        rpn_loc_loss = rpn_loc_loss.sum() / N_reg
+        rpn_loss = rpn_cls_loss + (rpn_lambda * rpn_loc_loss)
+
+        self.rpn_loss = rpn_loss
+
     def generate_proposal_rois(self, features, anchors, train):
         if train:
             pre_nms = self.n_train_pre_nms
@@ -70,6 +105,9 @@ class RegionProposalNetwork(nn.Module):
         objectness_score = pred_cls_scores.view(batch_size, 50, 50, 9, 2)[:, :, :, :, 1].contiguous().view(1, -1)
         #Out torch.Size([1, 22500])
         pred_cls_scores  = pred_cls_scores.view(batch_size, -1, 2)
+
+        self.pred_anchor_locs = pred_anchor_locs
+        self.pred_cls_scores = pred_cls_scores
 
         anc_height = anchors[:, 2] - anchors[:, 0]
         anc_width = anchors[:, 3] - anchors[:, 1]
