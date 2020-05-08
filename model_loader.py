@@ -26,8 +26,8 @@ def get_transform():
 class ModelLoader():
     # Fill the information for your team
     team_name = 'Radio Station WXYB'
-    team_member = [Xiaoyi Zhang, Yada Pruksachatkun, 
-                   Weicheng Zhu, Brian Kelly]
+    team_member = ["Xiaoyi Zhang", "Yada Pruksachatkun", 
+                   "Weicheng Zhu", "Brian Kelly"]
     contact_email = 'bak438@nyu.edu'
 
     def __init__(self, model_file="models"):
