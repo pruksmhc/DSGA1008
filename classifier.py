@@ -31,7 +31,7 @@ class Classifier(nn.Module):
         k = self.roi_head_classifier(k)
         roi_cls_loc = self.cls_loc(k)
         roi_cls_score = self.score(k)
-        
+        import pdb; pdb.set_trace()
         preds = roi_cls_loc.view(128, -1, 4)
         
         pred_class = torch.argmax(roi_cls_score, dim=1)

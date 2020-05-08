@@ -103,10 +103,10 @@ class AnchorGenerator(nn.Module):
         eps = np.finfo(height.dtype).eps
         height = np.maximum(height, eps)
         width = np.maximum(width, eps)
-        dy = (base_ctr_y - ctr_y) / height
-        dx = (base_ctr_x - ctr_x) / width
-        dh = np.log(abs(base_height / height)+0.0005)
-        dw = np.log(abs(base_width / width) + 0.005)
+        dy = (np.array(base_ctr_y) - ctr_y) / height
+        dx = (np.array(base_ctr_x) - ctr_x) / width
+        dh = np.log(abs(np.array(base_height) / height)+0.0005)
+        dw = np.log(abs(np.array(base_width) / width) + 0.005)
         anchor_locs = np.vstack((dy, dx, dh, dw)).transpose()
 
         anchor_labels = np.empty((len(anchors),), dtype=label.dtype)

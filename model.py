@@ -28,14 +28,14 @@ class FasterRCNNBoundingBox(nn.Module):
         self.classifier = Classifier(device, number_classes=9)
         if backbone is None:
             self.backbone = models.alexnet(pretrained=False, num_classes=4).to(device)
-            """
+            
             state_dict_file = "alexnet_5.pkl"
             if torch.cuda.is_available():
                 self.backbone.load_state_dict(torch.load(state_dict_file))
             else:
                 self.backbone.load_state_dict(torch.load(state_dict_file,
                                                         map_location=torch.device('cpu')))
-           """ 
+            
         else:
             self.backbone = backbone
 
@@ -64,7 +64,7 @@ class FasterRCNNBoundingBox(nn.Module):
         Returns:
             Output locations, output scores, and a bunch of things you need to calculate the loss.
         """
-        import pdb; pdb.set_trace()
+        import pdb#; pdb.set_trace()
         img_features = self.backbone.features(samples.to(device))
         img_features = torch.nn.functional.interpolate(img_features[None], size=(512,50,50))[0]
 

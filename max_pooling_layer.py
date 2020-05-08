@@ -14,6 +14,7 @@ class MaxPoolingLayer(nn.Module):
             self.adaptive_max_pool = adaptive_max_pool
 
     def forward(self, sample_rois, img_features):
+        import pdb;pdb.set_trace()
         size = (7, 7)
         adaptive_max_pool = nn.AdaptiveMaxPool2d((size[0], size[1]))
         rois = torch.from_numpy(sample_rois).float()
@@ -31,7 +32,7 @@ class MaxPoolingLayer(nn.Module):
         for i in range(num_rois):
             roi = rois[i]
             im_idx = roi[0]
-        im = img_features.narrow(0, im_idx, 1)[..., roi[2]:(roi[4]+1), roi[1]:(roi[3]+1)]
-        output.append(adaptive_max_pool(im))
+            im = img_features.narrow(0, im_idx, 1)[..., roi[2]:(roi[4]+1), roi[1]:(roi[3]+1)]
+            output.append(adaptive_max_pool(im))
         output = torch.cat(output, 0)
         return output

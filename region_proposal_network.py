@@ -113,7 +113,7 @@ class RegionProposalNetwork(nn.Module):
         y2 = roi[:, 2]
         x2 = roi[:, 3]
         area = (x2 - x1 + 1) * (y2 - y1 + 1)
-        order = score[:self.n_train_pre_nms].argsort()[::-1]
+        order = score[:pre_nms].argsort()[::-1]
         keep = []
         import pdb; pdb.set_trace()
         while order.size > 0:
@@ -134,8 +134,8 @@ class RegionProposalNetwork(nn.Module):
             inds = np.where(ovr <= self.nms_thresh)[0]
             order = order[inds + 1]
 
-            keep = keep[:self.post_nms] # while training/testing , use accordingly
-            roi = roi[keep] # the final region proposals
+        keep = keep[:post_nms] # while training/testing , use accordingly
+        roi = roi[keep] # the final region proposals
 
         return roi
 
@@ -197,5 +197,5 @@ class RegionProposalNetwork(nn.Module):
             raise ValueError("train is true, but no label is passed!!")
 
         proposal_rois = self.generate_proposal_rois(features, anchors, train)
-        return self.generate_sample_rois(proposal_rois, labels)
+        return self.generate_sample_rois(proposal_rois, labels, train)
 
