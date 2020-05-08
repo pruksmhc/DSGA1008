@@ -31,14 +31,14 @@ class ModelLoader():
 
     def __init__(self, model_file="models"):
         
-        # self.bbox_model = FasterRCNN()
-        # state_dict_file_lane = 'state_dict_faster_rcnn.pkl'
-        # if torch.cuda.is_available():
-        #    self.model.load_state_dict(torch.load(state_dict_file_bbox)))
-        # else:
-        #    self.model.load_state_dict(state_dict_file,
-        #                               map_location=torch.device('cpu')))
-        # self.bbox_model = self.bbox_model.to(device)
+        self.bbox_model = FasterRCNNBoundingBox()
+        state_dict_file_lane = 'state_dict_faster_rcnn.pkl'
+        if torch.cuda.is_available():
+           self.model.load_state_dict(torch.load(state_dict_file_bbox)))
+        else:
+           self.model.load_state_dict(state_dict_file,
+                                      map_location=torch.device('cpu')))
+        self.bbox_model = self.bbox_model.to(device)
 
         self.lane_model = Unet(backbone_name='resnet101', pretrained=False, encoder_freeze=False, classes=2)
         state_dict_file_lane = model_file + '/state_dict_road_map.pkl'
@@ -59,8 +59,8 @@ class ModelLoader():
         # You need to return a tuple with size 'batch_size' and each element is a cuda tensor [N, 2, 4]
         # where N is the number of object
 
-        bboxes = self.bbox_model.forward(transform_samples(samples).to(device))
-        return transform_back_bounding_boxes(bboxes)
+        output_loc, output_score, anchor_locations, anchor_labels, gt_roi_locs, gt_roi_labels = model(samples1.to(device))
+        return transform_back_bounding_boxes(output_loc)
 
     def get_binary_road_map(self, samples):
         # samples is a cuda tensor with size [batch_size, 6, 3, 256, 306]
